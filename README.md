@@ -68,7 +68,8 @@ This repo is me trying to hit the sweet spot.
 
 My strategy consists of excellent [django-environ](https://github.com/joke2k/django-environ) used with `ini` style files, 
 providing `os.environment` defaults for local development, some minimal and short `settings/<purpose>.py` files that have an 
-`import settings/base.py` *AFTER* the `os.environment` was set from an `INI` file. This effectively give us a kind of settings injection.
+`import settings/base.py` *AFTER* the `os.environment` updated missing settings from an `INI` file. 
+This effectively give us a kind of settings injection.
 
 The trick here is to modify `os.environment` before you import `settings/base.py`.
 
