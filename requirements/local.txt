@@ -1,0 +1,16 @@
+# Local development dependencies go here
+-r base.txt
+mock
+nose
+pathlib
+bumpversion
+unittest-xml-reporting
+factory-boy
+selenium
+coverage
+pylint
+django-test-plus
+pytest-django
+pytest-sugar
+wheel
+django-extensions
