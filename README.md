@@ -32,7 +32,7 @@ This repo is me trying to hit the sweet spot.
  3. Have sensible fallback defaults. Ideally for local development you don't need anything more beside defaults.
 
  2. …but try to keep defaults production safe. It's better to miss a setting override locally, 
- than having to remember to adjust default settings safe for production.
+ than having to remember to adjust default settings making it safe for production.
 
  4. Have the ability to switch `DEBUG` on/off in a way that can have an effect on other settings (eg. using javascript compressed or not).
 
@@ -62,7 +62,7 @@ This repo is me trying to hit the sweet spot.
  5. No complicated logic based nonsense. Configuration should be fixed and materialized not computed on the fly. 
     Providing a fallback defaults is just enough logic here.  
     Do you really want to debug, why locally you have correct set of settings but in production on a remote server, 
-    on one of hundred machined something computed differently? Oh! Unit tests? For settings? Seriously?      
+    on one of hundred machines something computed differently? Oh! Unit tests? For settings? Seriously?      
 
 # Solution
 
@@ -71,6 +71,7 @@ providing `os.environment` defaults for local development, some minimal and shor
 `import settings/base.py` *AFTER* the `os.environment` was set from an `INI` file. This effectively give us a kind of settings injection.
 
 The trick here is to modify `os.environment` before you import `settings/base.py`.
+
     .
     │   manage.py
     ├───data
