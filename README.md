@@ -57,14 +57,20 @@ This repo is me trying to hit the sweet spot.
  2. Do not override DJANGO_SETTINGS_MODULE in your project/app code, eg. based on hostname or process name.  
     If you are lazy to set environment variable (like for `setup.py test`) do it in tooling just before you run your project code.
  
- 4. Avoid magic and patching of how django reads it's settings, preprocess the settings but do not interfere afterwards. 
+ 4. Avoid magic and patching of how django reads it's settings, preprocess the settings but do not interfere afterwards.
+  
+ 5. No complicated logic based nonsense. Configuration should be fixed and materialized not computed on the fly. 
+    Providing a fallback defaults is just enough logic here.  
+    Do you really want to debug, why locally you have correct set of settings but in production on a remote server, 
+    on one of hundred machined something computed differently? Oh! Unit tests? For settings? Seriously?      
 
 # Solution
 
-My solution consists of excellent [django-environ](https://github.com/joke2k/django-environ) used with `ini` style files, 
+My strategy consists of excellent [django-environ](https://github.com/joke2k/django-environ) used with `ini` style files, 
 providing `os.environment` defaults for local development, some minimal and short `settings/<purpose>.py` files that have an 
 `import settings/base.py` *AFTER* the `os.environment` was set from an `INI` file. This effectively give us a kind of settings injection.
 
+The trick here is to modify `os.environment` before you import `settings/base.py`.
     .
     │   manage.py
     ├───data
