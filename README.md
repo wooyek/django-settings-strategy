@@ -1,71 +1,96 @@
 # django-settings-strategy
 How to handle django settings in a maintainable way
 
-So there are some prety complicated patterns for settings customization that will give them flexibility in usage of evnironment, in place settings and sharing a common blocks.
+If you like it give me na upvote on SO: 
+http://stackoverflow.com/a/43938067/260480
 
-Just thinking about all that intertwining files give me a headache. Combining, importing (sometimes conditionally), overriding, patching what was already in case DEBUG setting changed later on. What a nightmare!
+---
 
-Through the year's I went though all different solutions. They all _somewhat_ work, but are so painful to manage. WTF! Do we really need all that hassle? We're started with just one file. Now we need a documentation just to correctly combine all this together.
+So there are some pretty complicated patterns for settings customization that will give them the flexibility in usage of: 
+
+- evnironment, 
+- in place settings, 
+- sharing common settings blocks and
+- branching based on purpose like local/testing/production.
+
+Just thinking about all these intertwining files gives me a headache. 
+Combining, importing (sometimes conditionally), overriding, patching of what was already set in case `DEBUG` setting changed later on. 
+What a nightmare!
+
+Through the years I went through all different solutions. They all _somewhat_ work, but are so painful to manage. 
+WTF! Do we really need all that hassle? We started with just one `settings.py` file. 
+Now we need a documentation just to correctly combine all these together in a correct order!
 
 This repo is me trying to hit the sweet spot.
 
 # Let's recap the goals (some common, some mine)
 
- 1. Keep secrets secret — don't store them in a repo.
+ 1. Keep secrets a secret — don't store them in a repo.
 
  2. Set/read keys and secrets through environment settings, [12 factor style](https://12factor.net/).
 
- 3. Have sensible fallback defaults. Ideally local settings do not need overriding in development.
+ 3. Have sensible fallback defaults. Ideally for local development you don't need anything more beside defaults.
 
- 2. …but try to keep defaults production safe. It's better to miss a setting override locally, than to forget to make production safe for use.
+ 2. …but try to keep defaults production safe. It's better to miss a setting override locally, 
+ than having to remember to adjust default settings safe for production.
 
- 4. Have the ability to switch DEBUG on/off in a way that can have an effect on other settings (eg. using javascript compressed or not)
+ 4. Have the ability to switch `DEBUG` on/off in a way that can have an effect on other settings (eg. using javascript compressed or not).
 
- 5. Switching between local/testing/staging/production based only on `DJANGO_SETTINGS_MODULE`, nothing more
+ 5. Switching between purpose settings, like local/testing/staging/production, should be based only on `DJANGO_SETTINGS_MODULE`, nothing more.
 
- 6. …but allow further parametrization through environment settings like `DATABASE_URL`).
+ 6. …but allow further parametrization through environment settings like `DATABASE_URL`.
 
- 6. …allow them to use/run them locally side by side, eg. production setup on local developer machine, to access production database or test compressed style sheets.
+ 6. …also allow them to use different purpose settings and run them locally side by side, eg. production setup on local developer machine, to access production database or smoke test compressed style sheets.
 
- 7. Fail if an environment variable is not explicitly set even to empty value, especially in production, eg. `EMAIL_HOST_PASSWORD`.
+ 7. Fail if an environment variable is not explicitly set (requiring an empty value at minimum), especially in production, eg. `EMAIL_HOST_PASSWORD`.
 
- 8. Respond to default `DJANGO_SETTINGS_MODULE` set in manage.py during [django-admin startproject] (https://docs.djangoproject.com/en/dev/ref/django-admin/#startproject)
+ 8. Respond to default `DJANGO_SETTINGS_MODULE` set in manage.py during [django-admin startproject](https://docs.djangoproject.com/en/dev/ref/django-admin/#startproject)
 
- 9. Keep conditionals to a minimum, if the condition is _the_ environment type (eg. log file and it's rotation) override settings in associated settings file.   
+ 9. Keep conditionals to a minimum, if the condition is _the_ purposed environment type (eg. for production set log file and it's rotation), override settings in associated purposed settings file.   
 
 # Do not's
 
  1. Do not let django read DJANGO_SETTINGS_MODULE setting form a file.  
-    Ugh! Think of how meta it is. If you need/have a file (like docker
-    env) read that into the environment.
+    Ugh! Think of how meta this is. If you need to have a file (like docker
+    env) read that into the environment before staring up a django process.
+ 
  2. Do not override DJANGO_SETTINGS_MODULE in your project/app code, eg. based on hostname or process name.  
-    If you are lazy to set environment (like for `setup.py test`) do it in tooling just before you run your project code.
+    If you are lazy to set environment variable (like for `setup.py test`) do it in tooling just before you run your project code.
+ 
  4. Avoid magic and patching of how django reads it's settings, preprocess the settings but do not interfere afterwards. 
 
 # Solution
 
-My solution consists of [django-environ](https://github.com/joke2k/django-environ) use with ini style files for local development and `base.py` import *AFTER* an environment was set. This effectively give us something like settings injection.
+My solution consists of excellent [django-environ](https://github.com/joke2k/django-environ) used with `ini` style files, 
+providing `os.environment` defaults for local development, some minimal and short `settings/<purpose>.py` files that have an 
+`import settings/base.py` *AFTER* the `os.environment` was set from an `INI` file. This effectively give us a kind of settings injection.
 
     .
     │   manage.py
     ├───data
     └───website
     ├───settings
-    │   │   __init__.py
-    │   │   base.py
-    │   │   local.py
-    │   │   production.py
-    │   │   testing.py
-    │   │   .env   <-- not kept in repo
+    │   │   __init__.py   <-- imports local for compatybility
+    │   │   base.py       <-- almost all the settings, reads from proces environment 
+    │   │   local.py      <-- a few modifications for local development
+    │   │   production.py <-- ideally is empy and everything is in base 
+    │   │   testing.py    <-- mimics production with a reasonable exeptions
+    │   │   .env          <-- for local use, not kept in repo
     │   __init__.py
     │   urls.py
     │   wsgi.py
 
 
+## settings/.env
+
+A defaults for local development. A secret file, to mostly set required environment variables. 
+Set them to empty values if they are not required in local development. 
+We provide defaults here and not in `settings/base.py` to fail on any other machine if the're missing from the environment.
+
 ## settings/local.py
 
-Let's start in the middle: local development. What happens here, is loading environment from a local, secret file. Then importing commons from `settings/base.py`. Then we override defaults to ease local development.
-
+What happens in here, is loading environment from `settings/.env`, then importing common settings 
+from `settings/base.py`. After that we can override a few to ease local development.
 
     import logging
     import environ
@@ -99,20 +124,25 @@ Let's start in the middle: local development. What happens here, is loading envi
 
 ## settings/production.py
 
-For production we should not expect an evironment file, but it's easier to have one if we're testing something. So let's also override some enviroment:
+For production we should not expect an environment file, but it's easier to have one if we're testing something. 
+But anyway, lest's provide few defaults inline, so `settings/base.py` can respond accordingly. 
 
     environ.Env.read_env(Path(__file__) / "production.env", DEBUG='False', ASSETS_DEBUG='False')
     from .base import *
 
-The main point of interest here are `DEBUG` and `ASSETS_DEBUG` overrides, that will be applied to the python `os.environ` ONLY if there are missing from the environment and the file. These are our production defaults, no need to put them in the environment but they can be overridden if needed. Neat!
+The main point of interest here are `DEBUG` and `ASSETS_DEBUG` overrides, 
+they will be applied to the python `os.environ` ONLY if they are MISSING from the environment and the file. 
+
+These will be our production defaults, no need to put them in the environment or file, but they can be overridden if needed. Neat!
 
 ## settings/base.py
 
-These are your vanilla django settings, with some conditionals and lot's of reading them from the environment. Almost everything is here, keeping all the environments consistent.
+These are your mostly vanilla django settings, with a few conditionals and lot's of reading them from the environment. 
+Almost everything is in here, keeping all the purposed environments consistent and as similar as possible.
 
-The main differences are (I hope these are self explanatory):
+The main differences are below (I hope these are self explanatory):
 
-import environ
+    import environ
     
     # https://github.com/joke2k/django-environ
     env = environ.Env()
@@ -201,12 +231,13 @@ import environ
     ASSETS_AUTO_BUILD = ASSETS_DEBUG
     ASSETS_MODULES = ('website.assets',)
 
-Le last bit shows the power here. `ASSETS_DEBUG` has a sensible default, which can be overridden in `settings/production.py` and that can be overriden by an environment setting! 
+The last bit shows the power here. `ASSETS_DEBUG` has a sensible default, 
+which can be overridden in `settings/production.py` and even that that can be overridden by an environment setting! Yay! 
 
 In effect we have a mixed hierarchy of importance:
 
-1. settings/<purpose>.py - sets missing defaults, does not store secrets
-2. settings/base.py - is controlled by environment 
-3. process environment - 12 factor baby!
-4. settings/.env - local defaults for easy setup
+1. settings/<purpose>.py - sets defaults based on purpose, does not store secrets
+2. settings/base.py - is mostly controlled by environment 
+3. process environment settings - 12 factor baby!
+4. settings/.env - local defaults for easy startup
  
